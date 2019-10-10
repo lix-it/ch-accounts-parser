@@ -26,12 +26,17 @@ type AccountsFilingEntry struct {
 	ApprovalDate   string `xml:"DateApproval" csv:"approval_date"`
 	Dormant        string `xml:"CompanyDormant" csv:"-"`
 	PeriodEnd      string `xml:"context[0]>period>endDate" csv:"-"`
+	AddressLine1   string `csv:"address_line_1"`
+	AddressLine2   string `csv:"address_line_2"`
+	CityOrTown     string `csv:"city_or_town"`
+	PostCode       string `csv:"post_code"`
 }
 
 func (c AccountsFilingEntry) String() string {
 	var result string
 	result = fmt.Sprintf("Name: %v\n", c.Name)
 	result = fmt.Sprintf("%vID: %v\n", result, c.RegistrationID)
+	result = fmt.Sprintf("%vAddress: %v, %v, %v, %v\n", result, c.AddressLine1, c.AddressLine2, c.CityOrTown, c.PostCode)
 	result = fmt.Sprintf("%vApproval Date: %v\n", result, c.ApprovalDate)
 	result = fmt.Sprintf("%vDormant: %v\n", result, c.Dormant)
 	result = fmt.Sprintf("%vPeriod End Date: %v\n", result, c.PeriodEnd)
@@ -163,6 +168,20 @@ func getStuffFromHTMLInput(input io.Reader, wg *sync.WaitGroup, c chan AccountsF
 
 	doc.Find("[name*=\":EndDateForPeriodCoveredByReport\"]").Each(func(i int, s *goquery.Selection) {
 		result.PeriodEnd = s.Text()
+	})
+
+	// Address
+	doc.Find("[name*=\"AddressLine1\"]").Each(func(i int, s *goquery.Selection) {
+		result.AddressLine1 = s.Text()
+	})
+	doc.Find("[name*=\"AddressLine2\"]").Each(func(i int, s *goquery.Selection) {
+		result.AddressLine2 = s.Text()
+	})
+	doc.Find("[name*=\"CityOrTown\"]").Each(func(i int, s *goquery.Selection) {
+		result.CityOrTown = s.Text()
+	})
+	doc.Find("[name*=\"PostalCode\"]").Each(func(i int, s *goquery.Selection) {
+		result.PostCode = s.Text()
 	})
 
 	if result.RegistrationID == "" || result.Name == "" {
