@@ -24,7 +24,7 @@ type AccountsFilingEntry struct {
 	RegistrationID string `xml:"CompaniesHouseRegisteredNumber" csv:"company_registration"`
 	Name           string `xml:"EntityNames>EntityCurrentLegalName" csv:"name"`
 	ApprovalDate   string `xml:"DateApproval" csv:"approval_date"`
-	Dormant        string `xml:"CompanyDormant" csv:"-"`
+	Dormant        string `xml:"CompanyDormant" csv:"dormant"`
 	PeriodEnd      string `xml:"context[0]>period>endDate" csv:"-"`
 	AddressLine1   string `csv:"address_line_1"`
 	AddressLine2   string `csv:"address_line_2"`
