@@ -102,6 +102,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("Processed %v / %v, took %v\n", len(results), len(files), time.Since(start))
+	fmt.Printf("Data Quality score: %v%%\n", calculateDataQuality(results))
 }
 
 func detectFileType(file *os.File) (int, error) {
