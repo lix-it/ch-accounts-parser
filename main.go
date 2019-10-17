@@ -48,6 +48,9 @@ func main() {
 	// ~16s without goroutines
 	// ~6s with goroutines
 	start := time.Now()
+	defer func() {
+		fmt.Printf("Program took %v\n", time.Since(start))
+	}()
 	// load arguments
 	argsWithoutProg := os.Args[1:]
 	inputDir := "data"
@@ -122,7 +125,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Processed %v / %v, took %v\n", len(results), len(files), time.Since(start))
+	fmt.Printf("Processed %v / %v\n", len(results), len(files))
 	fmt.Printf("Data Quality score: %v%%\n", calculateDataQuality(results))
 }
 
