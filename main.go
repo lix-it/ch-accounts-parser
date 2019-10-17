@@ -50,19 +50,22 @@ func main() {
 	start := time.Now()
 	// load arguments
 	argsWithoutProg := os.Args[1:]
-	inputDir := argsWithoutProg[0]
-	if inputDir == "" {
-		inputDir = "data"
-	}
-	outputFile := argsWithoutProg[1]
-	if outputFile == "" {
-		outputFile = "output.csv"
+	inputDir := "data"
+	outputFile := "output.csv"
+	for index, value := range argsWithoutProg {
+		if index == 0 {
+			inputDir = value
+		}
+		if index == 1 {
+			outputFile = value
+		}
 	}
 	// load directory
 	dir, err := os.Open(inputDir)
 	if err != nil {
 		panic(err)
 	}
+	defer dir.Close()
 	files, err := dir.Readdirnames(-1)
 	if err != nil {
 		panic(err)
@@ -78,6 +81,7 @@ func main() {
 	var wg sync.WaitGroup
 	c := make(chan AccountsFilingEntry)
 	done := make(chan bool)
+	fileClose := make(chan io.ReadCloser)
 	go func() {
 		for {
 			select {
@@ -87,16 +91,18 @@ func main() {
 			case res := <-c:
 				fmt.Println(res)
 				results = append(results, res)
+			case closeMe := <-fileClose:
+				// close the file descriptor
+				closeMe.Close()
 			}
 		}
 	}()
 	fmt.Printf("Processing %v files\n", len(files))
 	for _, fileName := range files {
-		f, err := os.Open(path.Join("./data", fileName))
+		f, err := os.Open(path.Join(inputDir, fileName))
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
 		fileType, err := detectFileType(f)
 		if err != nil {
 			panic(err)
@@ -104,10 +110,10 @@ func main() {
 		switch fileType {
 		case HTML:
 			wg.Add(1)
-			go getStuffFromHTMLInput(f, &wg, c)
+			go getStuffFromHTMLInput(f, &wg, c, fileClose)
 		case XML:
 			wg.Add(1)
-			go getStuffFromXMLInput(f, &wg, c)
+			go getStuffFromXMLInput(f, &wg, c, fileClose)
 		}
 	}
 	wg.Wait()
@@ -131,7 +137,7 @@ func detectFileType(file *os.File) (int, error) {
 	return 0, fmt.Errorf("could not get file ext: %v", ext)
 }
 
-func getStuffFromXMLInput(input io.Reader, wg *sync.WaitGroup, c chan AccountsFilingEntry) {
+func getStuffFromXMLInput(input io.ReadCloser, wg *sync.WaitGroup, c chan AccountsFilingEntry, closer chan io.ReadCloser) {
 	defer wg.Done()
 	var result AccountsFilingEntry
 	b, err := ioutil.ReadAll(input)
@@ -149,9 +155,10 @@ func getStuffFromXMLInput(input io.Reader, wg *sync.WaitGroup, c chan AccountsFi
 	}
 
 	c <- result
+	closer <- input
 }
 
-func getStuffFromHTMLInput(input io.Reader, wg *sync.WaitGroup, c chan AccountsFilingEntry) {
+func getStuffFromHTMLInput(input io.ReadCloser, wg *sync.WaitGroup, c chan AccountsFilingEntry, closer chan io.ReadCloser) {
 	defer wg.Done()
 	var result AccountsFilingEntry
 	doc, err := goquery.NewDocumentFromReader(input)
@@ -203,4 +210,5 @@ func getStuffFromHTMLInput(input io.Reader, wg *sync.WaitGroup, c chan AccountsF
 	}
 
 	c <- result
+	closer <- input
 }
