@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+ch-accounts-parser
 
 # Compressed artifacts
 *.zip
