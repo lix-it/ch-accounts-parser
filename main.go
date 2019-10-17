@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -15,11 +14,8 @@ import (
 	"github.com/gocarina/gocsv"
 )
 
-const (
-	HTML = iota
-	XML  = iota
-)
-
+// AccountsFilingEntry is the source data structure for the accounts entry
+// in the output CSV file
 type AccountsFilingEntry struct {
 	RegistrationID string `xml:"CompaniesHouseRegisteredNumber" csv:"company_registration"`
 	Name           string `xml:"EntityNames>EntityCurrentLegalName" csv:"name"`
@@ -32,18 +28,6 @@ type AccountsFilingEntry struct {
 	PostCode       string `csv:"post_code"`
 }
 
-func (c AccountsFilingEntry) String() string {
-	var result string
-	result = fmt.Sprintf("Name: %v\n", c.Name)
-	result = fmt.Sprintf("%vID: %v\n", result, c.RegistrationID)
-	result = fmt.Sprintf("%vAddress: %v, %v, %v, %v\n", result, c.AddressLine1, c.AddressLine2, c.CityOrTown, c.PostCode)
-	result = fmt.Sprintf("%vApproval Date: %v\n", result, c.ApprovalDate)
-	result = fmt.Sprintf("%vDormant: %v\n", result, c.Dormant)
-	result = fmt.Sprintf("%vPeriod End Date: %v\n", result, c.PeriodEnd)
-	result = fmt.Sprintf("%v\n", result)
-	return result
-}
-
 func main() {
 	// ~16s without goroutines
 	// ~6s with goroutines
@@ -53,18 +37,25 @@ func main() {
 	}()
 	// load arguments
 	argsWithoutProg := os.Args[1:]
-	inputDir := "data"
-	outputFile := "output.csv"
+	inputDirPath := "data"
+	outputFilePath := "output.csv"
 	for index, value := range argsWithoutProg {
 		if index == 0 {
-			inputDir = value
+			inputDirPath = value
 		}
 		if index == 1 {
-			outputFile = value
+			outputFilePath = value
 		}
 	}
+	err := convertAccountsDirToFile(inputDirPath, outputFilePath)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func convertAccountsDirToFile(inputDirPath string, outputFilePath string) error {
 	// load directory
-	dir, err := os.Open(inputDir)
+	dir, err := os.Open(inputDirPath)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +65,7 @@ func main() {
 		panic(err)
 	}
 	// open output file before processing to see if any errors
-	output, err := os.Create(outputFile)
+	output, err := os.Create(outputFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +93,7 @@ func main() {
 	}()
 	fmt.Printf("Processing %v files\n", len(files))
 	for _, fileName := range files {
-		f, err := os.Open(path.Join(inputDir, fileName))
+		f, err := os.Open(path.Join(inputDirPath, fileName))
 		if err != nil {
 			panic(err)
 		}
@@ -127,17 +118,7 @@ func main() {
 	}
 	fmt.Printf("Processed %v / %v\n", len(results), len(files))
 	fmt.Printf("Data Quality score: %v%%\n", calculateDataQuality(results))
-}
-
-func detectFileType(file *os.File) (int, error) {
-	ext := filepath.Ext(file.Name())
-	switch ext {
-	case ".html":
-		return HTML, nil
-	case ".xml":
-		return XML, nil
-	}
-	return 0, fmt.Errorf("could not get file ext: %v", ext)
+	return nil
 }
 
 func getStuffFromXMLInput(input io.ReadCloser, wg *sync.WaitGroup, c chan AccountsFilingEntry, closer chan io.ReadCloser) {
