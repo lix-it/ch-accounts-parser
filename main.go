@@ -48,8 +48,18 @@ func main() {
 	// ~16s without goroutines
 	// ~6s with goroutines
 	start := time.Now()
+	// load arguments
+	argsWithoutProg := os.Args[1:]
+	inputDir := argsWithoutProg[0]
+	if inputDir == "" {
+		inputDir = "data"
+	}
+	outputFile := argsWithoutProg[1]
+	if outputFile == "" {
+		outputFile = "output.csv"
+	}
 	// load directory
-	dir, err := os.Open("./data")
+	dir, err := os.Open(inputDir)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +68,7 @@ func main() {
 		panic(err)
 	}
 	// open output file before processing to see if any errors
-	output, err := os.Create("output.csv")
+	output, err := os.Create(outputFile)
 	if err != nil {
 		panic(err)
 	}
